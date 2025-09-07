@@ -1,80 +1,62 @@
 <?php
 include "db.php";
+session_start();
 
 $nameErr = $emailErr = $passErr = "";
 $name = $email = $password = "";
 $success = "";
 
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    // Name validation
-    if (empty($_POST["name"])) {
-        $nameErr = "Name is required ❌";
-    } else {
-        $name = htmlspecialchars($_POST["name"]);
-    }
+// sign up
 
-    // Email validation
-    if (empty($_POST["email"])) {
-        $emailErr = "Email is required ❌";
-    } elseif (!filter_var($_POST["email"], FILTER_VALIDATE_EMAIL)) {
-        $emailErr = "Invalid email format ❌";
-    } else {
+if (isset($_POST["signup"])) {
+    $_SERVER["REQUEST_METHOD"] == "POST";{
+        $name = htmlspecialchars($_POST["username"]);
         $email = $_POST["email"];
+        $password = $_POST["password"];
+        $confirm = $_POST["confirm"];
     }
+    
+    // validation 
+    if (empty($name)) $nameErr = "Name is Required";
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) $emailErr = "Invalid email";
+    if (strlen($password) < 6) $passErr = "Password must be at least 6 characters";
 
-    // Password validation
-    if (empty($_POST["password"])) {
-        $passErr = "Password is required ❌";
-    } elseif (strlen($_POST["password"]) < 6) {
-        $passErr = "Password must be at least 6 characters 🔑";
-    } else {
-        $password = password_hash($_POST["password"], PASSWORD_DEFAULT); // hash password
-    }
-
-    // If no errors → save to DB
     if ($nameErr == "" && $emailErr == "" && $passErr == "") {
-        $sql = "INSERT INTO users (name, email, password) VALUES ('$name', '$email', '$password')";
+        $hashed = password_hash($password, PASSWORD_DEFAULT);
+        $sql = "INSERT INTO register(name, email, password) VALUES('$name', '$email', '$password')";
 
         if ($conn->query($sql) === TRUE) {
-            $success = "Registration Successful 🎉";
+            $success = "Registration successful";
         } else {
-            $success = "Error: " . $conn->error;
+            $success = "Error: ". $conn->error;
         }
     }
 }
+
+
 // loggin 
-session_start();
-
-$error = "";
-
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $email = $_POST["email"];
+if (isset($_POST["login"])) {
+    $name = htmlspecialchars($_POST["username"]);
     $password = $_POST["password"];
 
-    // find user in DB
-    $sql = "SELECT * FROM users WHERE email = '$email' LIMIT 1";
-    $result = $conn->query($sql);
+    $sql = "SELECT FROM register WHERE email = '$email' LIMIT 1";
+    $result = $conn->query($ql);
 
-    if ($result->num_rows == 1) {
+    if ($result && $result->num_rows == 1) {
         $user = $result->fetch_assoc();
 
-        // verify password
         if (password_verify($password, $user["password"])) {
-            $_SESSION["username"] = $user["name"]; // session created
-
-            // if user clicked "remember me" → create cookie
-            if (isset($_POST["remember"])) {
-                setcookie("username", $user["name"], time() + 3600, "/"); // 1 hour
-            }
-
+            $_SESSION["username"] = $user["name"];
             header("Location: dashboard.php");
             exit();
         } else {
-            $error = "❌ Wrong password!";
+            $error = "Wrong password";
         }
+
     } else {
-        $error = "❌ No user found with that email.";
+        $error = "No user email found";
     }
+
 }
 ?>
 
@@ -97,9 +79,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
       <!-- Login -->
       <form class="form active" id="loginForm">
         <h2>Login</h2>
-        <input type="email" placeholder="Email" name="email">
+        <input type="text" placeholder="username" name="username">
         <input type="password" placeholder="Password" name="password">
-        <button>Login</button>
+        <button type="submit" name="login">Login</button>
       </form>
 
       <!-- Signup -->
@@ -108,7 +90,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         <input type="text" placeholder="Name" name="name">
         <input type="email" placeholder="Email" name="email">
         <input type="password" placeholder="Password" name="password">
-        <button>Register</button>
+        <input type="password" placeholder="Confirm" name="confirm">
+        <button type="submit" name="signup">Register</button>
       </form>
 
       <div class="toggle" onclick="toggleForms()">Switch to Sign Up</div>
